@@ -1,3 +1,5 @@
+import { videoUploadTicket, verifyProductVideo } from './product-videos';
+import { VideoVerifyDto } from './dto';
 import { HomepageDto } from './homepage.dto';
 import {
   GoneException,
@@ -76,6 +78,10 @@ export class ShopController {
   @Get('products') products() {
     return this.shop.products();
   }
+  @Post('admin/videos/upload-ticket') @UseGuards(AuthGuard, AdminGuard)
+  videoTicket() { return videoUploadTicket(); }
+  @Post('admin/videos/verify') @UseGuards(AuthGuard, AdminGuard)
+  verifyVideo(@Body() dto: VideoVerifyDto) { return verifyProductVideo(dto.publicId); }
   @Get('homepage') async homepage() {
     return (
       (await this.shop.db.getRepository(Setting).findOneBy({ id: 'homepage' }))?.value || null

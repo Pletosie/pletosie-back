@@ -11,6 +11,8 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
+  ArrayUnique,
   Length,
   Max,
   MaxLength,
@@ -33,7 +35,13 @@ export class VariantDto {
   @IsInt() @Min(1) @Max(10000000) price: number;
   @IsString() @MaxLength(1000) image: string;
 }
+export class VideoVerifyDto {
+  @IsString() @Matches(/^pletosie\/creations\/[a-f0-9-]{36}$/) publicId: string;
+}
 export class ProductDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(3) @ArrayUnique()
+  @IsString({each:true}) @MaxLength(1000,{each:true})
+  @Matches(/^https:\/\/res\.cloudinary\.com\/[a-zA-Z0-9_-]+\/video\/upload\//,{each:true}) videos?: string[];
   @IsString() @Length(2, 120) name: string;
   @IsString() @Length(2, 120) slug: string;
   @IsIn(['Robes', 'Ensembles', 'Hauts', 'Jupes']) category: string;

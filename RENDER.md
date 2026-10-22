@@ -24,3 +24,7 @@ Le navigateur utilise le proxy Vercel /api/v1 pour conserver un cookie de sessio
 Le callback Google existant https://pletosie.onrender.com/api/v1/auth/google/callback reste compatible : le serveur relaie une seule fois vers Vercel avant de valider le state, le nonce et le code PKCE. Il est aussi possible de configurer GOOGLE_CALLBACK_URL=https://pletosie.vercel.app/api/v1/auth/google/callback et d'autoriser exactement cette URL dans Google Console. Les deux deploiements doivent contenir le correctif.
 
 Les echecs sont traces par etape (state, google-token, session), sans codes OAuth ni cookies dans les logs.
+
+## Vidéos des créations
+
+Les mêmes variables CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET que pour les médias sont requises sur Render. Aucun secret Cloudinary ne doit être configuré dans le navigateur. L’admin obtient une signature, envoie le fichier directement vers Cloudinary, puis le backend vérifie les métadonnées avant la sauvegarde de l’article. Limites : 3 vidéos par création, 50 Mo et 180 secondes par vidéo (MP4, WebM, MOV). La migration ProductVideos est exécutée automatiquement au démarrage. Retirer une vidéo d’une fiche ne supprime pas le média Cloudinary pour préserver les références éventuelles.

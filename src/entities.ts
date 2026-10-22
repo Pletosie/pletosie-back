@@ -50,6 +50,7 @@ export class Product {
   @Column() care: string;
   @Column('integer') price: number;
   @Column() image: string;
+  @Column('simple-json', { default: '[]' }) videos: string[];
   @Column({ default: true }) published: boolean;
   @Column({ default: false }) madeToOrder: boolean;
   @Column('simple-json') variants: Variant[];

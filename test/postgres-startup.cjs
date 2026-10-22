@@ -45,7 +45,7 @@ async function main() {
     const migrations = await db.query(
       'SELECT count(*)::int AS count FROM migrations',
     );
-    assert.equal(migrations[0].count, 6);
+    assert.equal(migrations[0].count, 7);
     assert.equal(await db.getRepository(Product).count(), 8);
     const port = app.getHttpServer().address().port;
     const health = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
@@ -57,7 +57,7 @@ async function main() {
     assert.equal(await db.getRepository(Product).count(), 8);
     assert.equal(await db.showMigrations(), false);
     console.log(
-      'Nest/PostgreSQL OK: 6 migrations on an empty database, 8 demo products, HTTP health 200 on 0.0.0.0, restart without duplicates.',
+      'Nest/PostgreSQL OK: 7 migrations on an empty database, 8 demo products, HTTP health 200 on 0.0.0.0, restart without duplicates.',
     );
   } finally {
     if (app) await app.close();

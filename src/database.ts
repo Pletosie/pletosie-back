@@ -1,3 +1,4 @@
+import { ProductVideos1792882800000 } from './migrations/1792882800000-ProductVideos';
 import 'dotenv/config';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { entities } from './entities';
@@ -21,6 +22,7 @@ export function databaseOptions(): DataSourceOptions {
         WebPush1792627200000,
         ClassicSizes1792713600000,
         AudioDuration1792796400000,
+        ProductVideos1792882800000,
       ],
       // TypeORM completes pending migrations before Nest initializes ShopService/seed.
       migrationsRun: true,

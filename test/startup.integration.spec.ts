@@ -9,7 +9,7 @@ describe('Configuration du démarrage Render', () => {
       expect(options.type).toBe('postgres');
       expect(options.migrationsRun).toBe(true);
       expect(options.synchronize).toBe(false);
-      expect((options.migrations as unknown[]).length).toBe(6);
+      expect((options.migrations as unknown[]).length).toBe(7);
     } finally {
       if (previous === undefined) delete process.env.DATABASE_URL;
       else process.env.DATABASE_URL = previous;

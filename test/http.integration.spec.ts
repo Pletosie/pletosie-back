@@ -296,6 +296,11 @@ describe('Parcours HTTP authentifié', () => {
       .set('Cookie', cookie)
       .expect(403);
   });
+  it('réserve les imports vidéo à l’administration', async () => {
+    await request(app.getHttpServer()).post('/api/v1/admin/videos/upload-ticket').send({}).expect(401);
+    await request(app.getHttpServer()).post('/api/v1/admin/videos/upload-ticket').set('Cookie', cookie).send({}).expect(403);
+    await request(app.getHttpServer()).post('/api/v1/admin/videos/verify').set('Cookie', cookie).send({publicId:'pletosie/creations/test'}).expect(403);
+  });
   it('révoque la session à la déconnexion', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/logout')
