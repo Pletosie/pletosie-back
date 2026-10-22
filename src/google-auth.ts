@@ -20,7 +20,8 @@ import { hashToken } from './auth';
 import { OAuthAttempt, Session, User, PushDevice } from './entities';
 @Injectable()
 export class GoogleAuthService {
-  constructor(private db: DataSource) {}
+  
+  constructor(private db: DataSource) { }
   enabled() {
     return Boolean(
       process.env.GOOGLE_CLIENT_ID &&
@@ -39,6 +40,7 @@ export class GoogleAuthService {
       redirectUri: process.env.GOOGLE_CALLBACK_URL,
     });
   }
+  
   async begin() {
     const client = this.client();
     const state = randomBytes(32).toString('base64url');
@@ -190,18 +192,20 @@ export class GoogleAuthService {
       userId,
       expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
     });
-    res.cookie('pletosie_session', token, {
+
+
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
-      maxAge: 7 * 86400000,
+      secure: isProd,
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
       path: '/',
-    });
+    };
   }
 }
+const isProd = process.env.NODE_ENV === 'production';
 @Controller('auth')
 export class GoogleAuthController {
-  constructor(private google: GoogleAuthService) {}
+  constructor(private google: GoogleAuthService) { }
   @Get('providers') providers() {
     return { google: this.google.enabled() };
   }
@@ -214,8 +218,8 @@ export class GoogleAuthController {
     const { state, url } = await this.google.begin();
     res.cookie('pletosie_oauth', state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      secure: isProd,
+      sameSite: 'lax',
       maxAge: 10 * 60000,
       path: '/api/v1/auth/google',
     });
