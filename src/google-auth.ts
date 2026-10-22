@@ -193,7 +193,7 @@ export class GoogleAuthService {
     res.cookie('pletosie_session', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 7 * 86400000,
       path: '/',
     });
@@ -215,7 +215,7 @@ export class GoogleAuthController {
     res.cookie('pletosie_oauth', state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 10 * 60000,
       path: '/api/v1/auth/google',
     });
