@@ -47,7 +47,7 @@ Dans `pletosie-back` : `npm run build`, puis `npm run test:critical`. Dans `plet
 
 1. Configurer une base et des secrets séparés pour la recette et la production. Voir `compose.yaml` pour une base locale conteneurisée optionnelle.
 2. Définir `DATABASE_URL`, `DATABASE_SSL`, `FRONTEND_URL`, `HOST` et les secrets côté API. `HOST=0.0.0.0` est nécessaire en conteneur. Côté front : `NEXT_PUBLIC_API_URL` et `SITE_URL` réels avant compilation.
-3. Construire l’API puis exécuter `npm run migration:run` comme étape contrôlée. Le démarrage ne lance pas automatiquement les migrations. Sauvegarder avant toute migration à risque.
+3. Construire l’API. À l’initialisation PostgreSQL, TypeORM applique les migrations en attente avant le catalogue, le seed et les autres services Nest ; `synchronize` reste désactivé. `npm run migration:run` reste disponible pour les lancer séparément. Sauvegarder avant toute migration à risque. Pour une mise à l’échelle sur plusieurs instances, appliquer les migrations via une étape de pré-déploiement unique avant le démarrage des instances.
 4. Construire le front et lancer les services avec un superviseur, derrière HTTPS et sur un même site pour les cookies SameSite. Isoler les ports API/base du réseau public. Configurer les sauvegardes et l’alerting de l’hébergeur.
 5. Exécuter une sauvegarde PostgreSQL via `scripts/Backup-Database.ps1`, puis une restauration dans une base de recette vide distincte avec `pg_restore --exit-on-error --no-owner --dbname <URL_RECETTE> <archive>`. Contrôler les données et les médias après restauration. Aucun test de restauration réel n’a été exécuté sur ce poste, où PostgreSQL et Docker ne sont pas installés.
 

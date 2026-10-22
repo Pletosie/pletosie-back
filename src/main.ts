@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import { mkdirSync } from 'fs';
 import { AppModule } from './app.module';
 import { ApiErrors } from './errors';
+import { listenOptions } from './listen-options';
 async function bootstrap() {
   mkdirSync('work', { recursive: true });
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -62,9 +63,10 @@ async function bootstrap() {
       .build(),
   );
   SwaggerModule.setup('api/docs', app, document);
-  await app.listen(process.env.PORT || 4000, process.env.HOST || '127.0.0.1');
+  const { port, host } = listenOptions();
+  await app.listen(port, host);
   console.log(
-    `Pletosie API : http://localhost:${process.env.PORT || 4000}/api/docs`,
+    `Pletosie API démarrée sur ${host}:${port} (documentation : /api/docs)`,
   );
 }
 void bootstrap();

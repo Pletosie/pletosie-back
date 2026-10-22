@@ -22,7 +22,8 @@ export function databaseOptions(): DataSourceOptions {
         ClassicSizes1792713600000,
         AudioDuration1792796400000,
       ],
-      migrationsRun: false,
+      // TypeORM completes pending migrations before Nest initializes ShopService/seed.
+      migrationsRun: true,
       ssl:
         process.env.DATABASE_SSL === 'true'
           ? { rejectUnauthorized: true }

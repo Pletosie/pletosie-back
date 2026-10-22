@@ -19,6 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config test/jest-integration.json --runInBand",
     "test:critical": "jest --config test/jest-integration.json --runInBand",
+    "test:postgres": "npm run build && node test/postgres-startup.cjs",
     "migration:run": "node node_modules/typeorm/cli.js migration:run -d dist/database.js",
     "migration:revert": "node node_modules/typeorm/cli.js migration:revert -d dist/database.js",
     "push:configure": "node scripts/Configure-Push.cjs"
