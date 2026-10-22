@@ -197,7 +197,7 @@ export class GoogleAuthService {
     const cookieOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+      sameSite: 'lax',
       path: '/',
     };
   }
