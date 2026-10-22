@@ -622,9 +622,49 @@ export class ShopController {
     res.set({
       'Content-Type': m.mime,
       'Content-Length': String(bytes.length),
+      'Accept-Ranges': 'bytes',
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     });
+    const range = req.headers.range;
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      const total = bytes.length;
+      let start = 0,
+        end = total - 1;
+      if (match && (match[1] || match[2])) {
+        if (match[1]) {
+          start = Number(match[1]);
+          if (match[2]) end = Math.min(Number(match[2]), total - 1);
+        } else {
+          start = Math.max(0, total - Number(match[2]));
+        }
+      }
+      if (
+        !match ||
+        (!match[1] && !match[2]) ||
+        !Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        start > end ||
+        start >= total ||
+        (!match[1] && Number(match[2]) === 0)
+      ) {
+        res
+          .status(416)
+          .set({ 'Content-Range': 'bytes */' + total, 'Content-Length': '0' })
+          .end();
+        return;
+      }
+      const part = bytes.subarray(start, end + 1);
+      res
+        .status(206)
+        .set({
+          'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+          'Content-Length': String(part.length),
+        })
+        .send(part);
+      return;
+    }
     res.send(bytes);
   }
   @Get('conversations/:id/offers') @UseGuards(AuthGuard) async offers(

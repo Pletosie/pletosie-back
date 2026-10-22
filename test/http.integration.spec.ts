@@ -9,6 +9,7 @@ import {
   Product,
   Conversation,
   Session,
+  Message,
 } from '../src/entities';
 import { ShopService } from '../src/shop.service';
 import { ShopController } from '../src/shop.controller';
@@ -307,6 +308,59 @@ describe('Parcours HTTP authentifié', () => {
     await request(app.getHttpServer()).post('/api/v1/admin/videos/upload-ticket').send({}).expect(401);
     await request(app.getHttpServer()).post('/api/v1/admin/videos/upload-ticket').set('Cookie', cookie).send({}).expect(403);
     await request(app.getHttpServer()).post('/api/v1/admin/videos/verify').set('Cookie', cookie).send({publicId:'pletosie/creations/test'}).expect(403);
+  });
+  it('sert les portions audio et protège toujours le vocal', async () => {
+    const bytes = Buffer.from('0123456789');
+    await app
+      .get(DataSource)
+      .getRepository(Message)
+      .save({
+        id: 'range-audio', clientId: 'range-audio', text: '',
+        conversationId,
+        userId: clientId,
+        kind: 'audio',
+        audio: bytes.toString('base64'),
+        mime: 'audio/webm',
+      });
+    const url = '/api/v1/messages/range-audio/audio';
+    await request(app.getHttpServer())
+      .get(url)
+      .set('Range', 'bytes=0-3')
+      .expect(401);
+    const full = await request(app.getHttpServer())
+      .get(url)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(full.headers['accept-ranges']).toBe('bytes');
+    expect(full.body).toEqual(bytes);
+    for (const [range, contentRange, expected] of [
+      ['bytes=3-6', 'bytes 3-6/10', '3456'],
+      ['bytes=7-', 'bytes 7-9/10', '789'],
+      ['bytes=-2', 'bytes 8-9/10', '89'],
+      ['bytes=8-100', 'bytes 8-9/10', '89'],
+    ]) {
+      const part = await request(app.getHttpServer())
+        .get(url)
+        .set('Cookie', cookie)
+        .set('Range', range)
+        .expect(206);
+      expect(part.headers['content-range']).toBe(contentRange);
+      expect(part.body).toEqual(Buffer.from(expected));
+    }
+    for (const range of [
+      'bytes=20-',
+      'bytes=5-2',
+      'bytes=-0',
+      'bytes=-',
+      'bytes=0-1,3-4',
+    ]) {
+      await request(app.getHttpServer())
+        .get(url)
+        .set('Cookie', cookie)
+        .set('Range', range)
+        .expect(416)
+        .expect('Content-Range', 'bytes */10');
+    }
   });
   it('révoque la session à la déconnexion', async () => {
     await request(app.getHttpServer())
