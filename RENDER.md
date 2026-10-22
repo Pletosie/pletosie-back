@@ -28,3 +28,7 @@ Les echecs sont traces par etape (state, google-token, session), sans codes OAut
 ## Vidéos des créations
 
 Les mêmes variables CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET que pour les médias sont requises sur Render. Aucun secret Cloudinary ne doit être configuré dans le navigateur. L’admin obtient une signature, envoie le fichier directement vers Cloudinary, puis le backend vérifie les métadonnées avant la sauvegarde de l’article. Limites : 3 vidéos par création, 50 Mo et 180 secondes par vidéo (MP4, WebM, MOV). La migration ProductVideos est exécutée automatiquement au démarrage. Retirer une vidéo d’une fiche ne supprime pas le média Cloudinary pour préserver les références éventuelles.
+
+## Reçus et historique
+Les PDF sont générés uniquement pour les paiements confirmés de montant cohérent. Le propriétaire et l’administration peuvent les télécharger. Conserver le dossier assets/fonts dans le déploiement : les polices Noto Sans et leur licence y sont incluses. Aucun paramètre supplémentaire n’est requis. L’historique personnel présente les 100 dernières tentatives et donne accès aux reçus confirmés. Les réponses contenant ces données sont privées et non mises en cache.
+

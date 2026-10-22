@@ -1,3 +1,4 @@
+import { createReceipt, receiptNumber } from './receipt';
 import { videoUploadTicket, verifyProductVideo } from './product-videos';
 import { VideoVerifyDto } from './dto';
 import { HomepageDto } from './homepage.dto';
@@ -293,6 +294,78 @@ export class ShopController {
     return this.shop.db
       .getRepository(PaymentAttempt)
       .find({ where: { orderId: id }, take: 20, order: { createdAt: 'DESC' } });
+  }
+  @Get('payments/history')
+  @UseGuards(AuthGuard)
+  async paymentHistory(
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.set('Cache-Control', 'private, no-store');
+    const attempts = await this.shop.db
+      .getRepository(PaymentAttempt)
+      .find({
+        where: { userId: req.user.id },
+        order: { createdAt: 'DESC' },
+        take: 100,
+      });
+    const orders = attempts.length
+      ? await this.shop.db
+          .getRepository(Order)
+          .findBy({ id: In([...new Set(attempts.map((a) => a.orderId))]) })
+      : [];
+    return attempts.map((a) => {
+      const order = orders.find((o) => o.id === a.orderId);
+      return {
+        id: a.id,
+        orderId: a.orderId,
+        amount: a.amount,
+        currency: a.currency,
+        operator: a.operator,
+        reference: a.reference,
+        status: a.status,
+        createdAt: a.createdAt,
+        paidAt: order?.paidAt,
+        receiptNumber: receiptNumber(a.id),
+        receiptAvailable:
+          a.status === 'confirmed' &&
+          order?.paymentStatus === 'confirmed' &&
+          Boolean(a.reference) &&
+          a.amount === order.total &&
+          a.currency === 'XOF',
+      };
+    });
+  }
+  @Get('payments/:id/receipt')
+  @UseGuards(AuthGuard)
+  async receipt(
+    @Param('id') id: string,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    const attempt = await this.shop.db
+      .getRepository(PaymentAttempt)
+      .findOneBy({ id });
+    if (!attempt) throw new NotFoundException();
+    const order = await this.shop.order(attempt.orderId, req.user);
+    if (
+      attempt.status !== 'confirmed' ||
+      order.paymentStatus !== 'confirmed' ||
+      !attempt.reference ||
+      attempt.amount !== order.total ||
+      attempt.currency !== 'XOF'
+    )
+      throw new ConflictException(
+        'Le reçu est disponible uniquement après confirmation du paiement.',
+      );
+    const pdf = await createReceipt(order, attempt);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition':
+        'attachment; filename="' + receiptNumber(attempt.id) + '.pdf"',
+      'Cache-Control': 'private, no-store',
+    });
+    res.send(pdf);
   }
   @Post('payments/:id/verify') @UseGuards(AuthGuard) verify(
     @Param('id') id: string,
