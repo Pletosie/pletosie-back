@@ -15,7 +15,10 @@ async function bootstrap() {
   const origin = process.env.FRONTEND_URL || 'http://localhost:3000';
   app.use(helmet());
   app.use(json({ limit: '15mb' }));
-  app.enableCors({ origin, credentials: true });
+  app.enableCors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  });
   const limits = new Map<string, { count: number; until: number }>();
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (
