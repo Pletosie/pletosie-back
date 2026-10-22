@@ -153,6 +153,13 @@ describe('Parcours HTTP authentifié', () => {
       .expect(200);
     expect(messages.body).toHaveLength(1);
   });
+  it('conserve les emojis, accents et retours à la ligne sans altération', async () => {
+    const text='Bonjour 👋🏾🥰 ! Cette robe 😍\nFamille 👨‍👩‍👧‍👦 · 🇧🇯 · ❤️ · café';
+    const sent=await request(app.getHttpServer()).post(`/api/v1/conversations/${conversationId}/messages`).set('Cookie',cookie).send({kind:'text',text,clientId:'unicode-emoji-test'}).expect(201);
+    expect(sent.body.text).toBe(text);
+    const messages=await request(app.getHttpServer()).get(`/api/v1/conversations/${conversationId}/messages`).set('Cookie',cookie).expect(200);
+    expect(messages.body.find((m:{id:string})=>m.id===sent.body.id).text).toBe(text);
+  });
   it('refuse les pièces jointes non prévues', async () => {
     await request(app.getHttpServer())
       .post(`/api/v1/conversations/${conversationId}/messages`)

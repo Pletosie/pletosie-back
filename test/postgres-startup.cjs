@@ -46,6 +46,12 @@ async function main() {
       'SELECT count(*)::int AS count FROM migrations',
     );
     assert.equal(migrations[0].count, 7);
+    const { Message, User, Conversation } = require('../dist/entities');
+    await db.getRepository(User).save({id:'emoji-user',name:'Test Emoji',email:'emoji@example.com',role:'client'});
+    await db.getRepository(Conversation).save({id:'emoji-conversation',userId:'emoji-user',subject:'Emoji',updatedAt:new Date().toISOString()});
+    const emojiText = 'Bonjour 👋🏾🥰 👨‍👩‍👧‍👦 🇧🇯 ❤️\nCafé';
+    await db.getRepository(Message).save({id:'emoji-pg-test',conversationId:'emoji-conversation',userId:'emoji-user',clientId:'emoji-message-test',kind:'text',text:emojiText});
+    assert.equal((await db.getRepository(Message).findOneByOrFail({id:'emoji-pg-test'})).text, emojiText);
     assert.equal(await db.getRepository(Product).count(), 8);
     const port = app.getHttpServer().address().port;
     const health = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
