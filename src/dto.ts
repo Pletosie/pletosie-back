@@ -94,7 +94,7 @@ export class MessageDto {
   @IsOptional() @IsString() @MaxLength(4000) text?: string;
   @IsOptional() @IsString() @MaxLength(14000000) audio?: string;
   @IsOptional()
-  @IsIn(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg'])
+  @IsIn(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'])
   mime?: string;
 }
 export class EventDto {

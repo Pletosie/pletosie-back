@@ -36,6 +36,7 @@ export class AudioService {
       throw new BadRequestException('Encodage audio invalide.');
     const bytes = Buffer.from(base64, 'base64');
     const knownContainer =
+      (bytes.subarray(0,4).toString() === 'RIFF' && bytes.subarray(8,12).toString() === 'WAVE') ||
       bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) ||
       bytes.subarray(0, 4).toString() === 'OggS' ||
       bytes.subarray(4, 8).toString() === 'ftyp' ||
@@ -114,7 +115,7 @@ export class AudioService {
           'Le vocal doit durer au maximum trois minutes et avoir une durée vérifiable.',
         );
       const f = data.format.format_name;
-      const mime = f.includes('webm')
+      const mime = f.includes('wav') ? 'audio/wav' : f.includes('webm')
         ? 'audio/webm'
         : f.includes('ogg')
           ? 'audio/ogg'
