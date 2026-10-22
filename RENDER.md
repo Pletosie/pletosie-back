@@ -16,3 +16,11 @@ Vérification locale : `npm run test:postgres` crée une base temporaire distinc
 L’erreur `relation "products" does not exist` interrompait Nest avant l’ouverture du port HTTP. L’absence de port signalée par Render était donc d’abord une conséquence de cet arrêt. Le binding réseau est également adapté à Render.
 
 Si plusieurs instances démarrent simultanément, exécuter les migrations dans une étape de pré-déploiement unique avant leur démarrage. Une base déjà remplie créée sans historique de migrations demande une vérification spécifique : ne pas effacer ses tables pour faire disparaître une erreur.
+
+## Connexion Google avec Vercel
+
+Le navigateur utilise le proxy Vercel /api/v1 pour conserver un cookie de session sur le site. Configurer FRONTEND_URL=https://pletosie.vercel.app sur Render et NEXT_PUBLIC_API_URL=https://pletosie.onrender.com/api/v1 sur Vercel (API_URL peut aussi definir la destination du proxy). NODE_ENV=production est recommande sur Render.
+
+Le callback Google existant https://pletosie.onrender.com/api/v1/auth/google/callback reste compatible : le serveur relaie une seule fois vers Vercel avant de valider le state, le nonce et le code PKCE. Il est aussi possible de configurer GOOGLE_CALLBACK_URL=https://pletosie.vercel.app/api/v1/auth/google/callback et d'autoriser exactement cette URL dans Google Console. Les deux deploiements doivent contenir le correctif.
+
+Les echecs sont traces par etape (state, google-token, session), sans codes OAuth ni cookies dans les logs.

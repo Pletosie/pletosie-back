@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Injectable,
+  Logger,
   Query,
   Req,
   Res,
@@ -194,15 +195,17 @@ export class GoogleAuthService {
     });
 
 
-    const cookieOptions = {
+    res.cookie('pletosie_session', token, {
       httpOnly: true,
-      secure: isProd,
+      secure: secureCookies(),
       sameSite: 'lax',
+      maxAge: 7 * 86400000,
       path: '/',
-    };
+    });
   }
 }
-const isProd = process.env.NODE_ENV === 'production';
+const secureCookies = () => process.env.NODE_ENV === 'production' ||
+  process.env.FRONTEND_URL?.startsWith('https://') === true;
 @Controller('auth')
 export class GoogleAuthController {
   constructor(private google: GoogleAuthService) { }
@@ -218,7 +221,7 @@ export class GoogleAuthController {
     const { state, url } = await this.google.begin();
     res.cookie('pletosie_oauth', state, {
       httpOnly: true,
-      secure: isProd,
+      secure: secureCookies(),
       sameSite: 'lax',
       maxAge: 10 * 60000,
       path: '/api/v1/auth/google',
@@ -229,29 +232,45 @@ export class GoogleAuthController {
     @Query('state') state: string,
     @Query('code') code: string,
     @Query('error') error: string,
+    @Query('relay') relay: string,
     @Req() req: Request,
     @Res() res: Response,
   ) {
     res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
-    const frontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontend = new URL(process.env.FRONTEND_URL || 'http://localhost:3000').origin;
     const cookie = req.headers.cookie
       ?.split(';')
       .map((x) => x.trim())
       .find((x) => x.startsWith('pletosie_oauth='))
       ?.slice('pletosie_oauth='.length);
+    // Legacy callbacks on Render must return through the site's proxy to
+    // receive the OAuth cookie issued on Vercel. Relay at most once.
+    if (!cookie && relay !== '1' && frontend.startsWith('https://')) {
+      const target = new URL('/api/v1/auth/google/callback', frontend);
+      if (target.hostname !== req.hostname) {
+        for (const [key, value] of Object.entries({ state, code, error }))
+          if (typeof value === 'string') target.searchParams.set(key, value);
+        target.searchParams.set('relay', '1');
+        return res.redirect(target.toString());
+      }
+    }
     res.clearCookie('pletosie_oauth', { path: '/api/v1/auth/google' });
+    let stage = 'state';
     try {
       const attempt = await this.google.consume(state, cookie);
       if (error) return res.redirect(`${frontend}/compte?connexion=annulee`);
+      stage = 'google-token';
       const user = await this.google.complete(attempt, code);
       const previous = req.headers.cookie
         ?.split(';')
         .map((x) => x.trim())
         .find((x) => x.startsWith('pletosie_session='))
         ?.slice('pletosie_session='.length);
+      stage = 'session';
       await this.google.session(user.id, res, previous);
       return res.redirect(`${frontend}/compte`);
     } catch {
+      new Logger('GoogleAuth').warn(`Google sign-in failed at ${stage}`);
       return res.redirect(`${frontend}/compte?connexion=echec`);
     }
   }
