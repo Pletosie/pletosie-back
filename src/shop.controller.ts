@@ -358,13 +358,38 @@ export class ShopController {
   private async conversationViews(rows: Conversation[], viewer: User) {
     if (!rows.length) return [];
     const [people, products] = await Promise.all([
-      this.shop.db.getRepository(User).find({where:{id:In([...new Set(rows.map(c=>c.userId))])},select:{id:true,name:true}}),
-      this.shop.db.getRepository(Product).find({where:{id:In([...new Set(rows.map(c=>c.productId).filter(Boolean))])}}),
+      this.shop.db.getRepository(User).find({
+        where: { id: In([...new Set(rows.map((c) => c.userId))]) },
+        select: { id: true, name: true },
+      }),
+      this.shop.db.getRepository(Product).find({
+        where: {
+          id: In([...new Set(rows.map((c) => c.productId).filter(Boolean))]),
+        },
+      }),
     ]);
-    return rows.map(c=>{
-      const person=people.find(p=>p.id===c.userId);
-      const product=products.find(p=>p.id===c.productId);
-      return {...c,person:person?{id:person.id,name:person.name}:null,displayName:viewer.role==='admin'?(person?.name||'Client Pletosie'):'Atelier Pletosie',context:c.context?{...c.context,image:c.context.image||product?.image,price:c.context.price??product?.price,category:c.context.category||product?.category}:null};
+    return rows.map((c) => {
+      const person = people.find((p) => p.id === c.userId);
+      const product = products.find((p) => p.id === c.productId);
+      const variant = product?.variants.find(
+        (v) => `${v.color} · ${v.size}` === c.context?.variant,
+      );
+      return {
+        ...c,
+        person: person ? { id: person.id, name: person.name } : null,
+        displayName:
+          viewer.role === 'admin'
+            ? person?.name || 'Client Pletosie'
+            : 'Atelier Pletosie',
+        context: c.context
+          ? {
+              ...c.context,
+              image: c.context.image || variant?.image || product?.image,
+              price: c.context.price ?? variant?.price ?? product?.price,
+              category: c.context.category || product?.category,
+            }
+          : null,
+      };
     });
   }
   @Get('conversations') @UseGuards(AuthGuard) async conversations(
@@ -425,14 +450,14 @@ export class ShopController {
         adminReadAt: '',
       });
     });
-    return (await this.conversationViews([conversation],req.user))[0];
+    return (await this.conversationViews([conversation], req.user))[0];
   }
   @Get('conversations/:id') @UseGuards(AuthGuard) async conversation(
     @Param('id') id: string,
     @Req() req: AuthRequest,
   ) {
     const conversation = await this.shop.conversation(id, req.user);
-    return (await this.conversationViews([conversation],req.user))[0];
+    return (await this.conversationViews([conversation], req.user))[0];
   }
   @Get('conversations/:id/messages') @UseGuards(AuthGuard) async messages(
     @Param('id') id: string,

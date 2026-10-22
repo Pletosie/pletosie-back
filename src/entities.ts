@@ -127,6 +127,7 @@ export class Message {
   @Column() kind: string;
   @Column('text') text: string;
   @Column('text', { nullable: true }) audio: string | null;
+  @Column('float', { nullable: true }) audioDuration: number | null;
   @Column({ nullable: true }) mime: string;
   @CreateDateColumn() createdAt: Date;
 }

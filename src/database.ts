@@ -6,6 +6,7 @@ import { Operations1792368000001 } from './migrations/1792368000001-Operations';
 import { GoogleAuth1792368000002 } from './migrations/1792368000002-GoogleAuth';
 import { WebPush1792627200000 } from './migrations/1792627200000-WebPush';
 import { ClassicSizes1792713600000 } from './migrations/1792713600000-ClassicSizes';
+import { AudioDuration1792796400000 } from './migrations/1792796400000-AudioDuration';
 export function databaseOptions(): DataSourceOptions {
   if (process.env.DATABASE_URL)
     return {
@@ -19,6 +20,7 @@ export function databaseOptions(): DataSourceOptions {
         GoogleAuth1792368000002,
         WebPush1792627200000,
         ClassicSizes1792713600000,
+        AudioDuration1792796400000,
       ],
       migrationsRun: false,
       ssl:

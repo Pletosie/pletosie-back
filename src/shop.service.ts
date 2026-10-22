@@ -81,13 +81,11 @@ export class ShopService implements OnModuleInit, OnModuleDestroy {
     });
   }
   async products(admin = false) {
-    return this.db
-      .getRepository(Product)
-      .find({
-        where: admin ? {} : { published: true },
-        order: { createdAt: 'DESC' },
-        take: 200,
-      });
+    return this.db.getRepository(Product).find({
+      where: admin ? {} : { published: true },
+      order: { createdAt: 'DESC' },
+      take: 200,
+    });
   }
   async product(id: string) {
     const p = await this.db.getRepository(Product).findOneBy({ id });
@@ -223,7 +221,11 @@ export class ShopService implements OnModuleInit, OnModuleDestroy {
       }
       const subtotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
       const total = subtotal + zone.fee;
-      if (!Number.isSafeInteger(total) || total > 2147483647 || total !== dto.expectedTotal)
+      if (
+        !Number.isSafeInteger(total) ||
+        total > 2147483647 ||
+        total !== dto.expectedTotal
+      )
         throw new ConflictException(
           'Le prix a changé. Actualisez le panier et confirmez le nouveau total.',
         );
@@ -368,6 +370,7 @@ export class ShopService implements OnModuleInit, OnModuleDestroy {
       .findOneBy({ conversationId: id, clientId: dto.clientId });
     if (previous) return { ...previous, audio: undefined };
     let audio: string | null = null;
+    let audioDuration: number | null = null;
     let mime: string | undefined = undefined;
     const messageId = randomUUID();
     if (dto.kind === 'audio') {
@@ -375,6 +378,7 @@ export class ShopService implements OnModuleInit, OnModuleDestroy {
         throw new BadRequestException('Vocal manquant.');
       const validated = await this.audio.validate(dto.audio);
       mime = validated.mime;
+      audioDuration = validated.duration;
       audio = await this.audio.store(dto.audio, mime, messageId);
     }
     return this.transaction(async (em) => {
@@ -391,6 +395,7 @@ export class ShopService implements OnModuleInit, OnModuleDestroy {
         kind: dto.kind,
         text: dto.text?.trim() || '',
         audio,
+        audioDuration,
         mime,
       });
       await em.update(Conversation, id, {

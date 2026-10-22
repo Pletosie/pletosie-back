@@ -29,12 +29,22 @@ export class AudioService {
         secure: true,
       });
   }
-  async validate(base64: string): Promise<{ bytes: Buffer; mime: string }> {
+  async validate(
+    base64: string,
+  ): Promise<{ bytes: Buffer; mime: string; duration: number }> {
     if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))
       throw new BadRequestException('Encodage audio invalide.');
     const bytes = Buffer.from(base64, 'base64');
-    const knownContainer = bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])) || bytes.subarray(0,4).toString()==='OggS' || bytes.subarray(4,8).toString()==='ftyp' || bytes.subarray(0,3).toString()==='ID3' || (bytes[0]===0xff && (bytes[1]&0xe0)===0xe0);
-    if(!knownContainer)throw new BadRequestException('Le contenu ne correspond pas à un format audio accepté.');
+    const knownContainer =
+      bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) ||
+      bytes.subarray(0, 4).toString() === 'OggS' ||
+      bytes.subarray(4, 8).toString() === 'ftyp' ||
+      bytes.subarray(0, 3).toString() === 'ID3' ||
+      (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+    if (!knownContainer)
+      throw new BadRequestException(
+        'Le contenu ne correspond pas à un format audio accepté.',
+      );
     if (bytes.length < 16 || bytes.length > 10 * 1024 * 1024)
       throw new BadRequestException('Le vocal doit peser moins de 10 Mo.');
     const dir = await mkdtemp(join(tmpdir(), 'pletosie-audio-'));
@@ -115,7 +125,7 @@ export class AudioService {
               : null;
       if (!mime)
         throw new BadRequestException('Format audio non pris en charge.');
-      return { bytes, mime };
+      return { bytes, mime, duration };
     } catch (e) {
       if (e instanceof BadRequestException) throw e;
       throw new BadRequestException(

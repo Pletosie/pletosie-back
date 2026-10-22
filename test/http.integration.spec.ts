@@ -3,10 +3,16 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { entities, User,Product,Conversation } from '../src/entities';
+import {
+  entities,
+  User,
+  Product,
+  Conversation,
+  Session,
+} from '../src/entities';
 import { ShopService } from '../src/shop.service';
 import { ShopController } from '../src/shop.controller';
-import { AuthGuard, AdminGuard } from '../src/auth';
+import { AuthGuard, AdminGuard, hashToken } from '../src/auth';
 import { AudioService } from '../src/audio.service';
 import { PaymentsService } from '../src/payments.service';
 import { DataSource } from 'typeorm';
@@ -159,14 +165,137 @@ describe('Parcours HTTP authentifié', () => {
       })
       .expect(400);
   });
-  it('ouvre ou retrouve la discussion produit sans doublon en cas de clic répété',async()=>{
-    await app.get(DataSource).getRepository(Product).save({id:'discussion-product',slug:'discussion-product',name:'Pièce à discuter',category:'Robes',description:'Article de test pour discussion',material:'Coton',care:'Lavage doux',price:1000,image:'/test.svg',published:true,madeToOrder:false,variants:[{id:'discussion-variant',color:'Noir',hex:'#000000',size:'P1',stock:1,price:1000,image:'/test.svg'}]});
-    const responses=await Promise.all([1,2].map(()=>request(app.getHttpServer()).post('/api/v1/conversations').set('Cookie',cookie).send({productId:'discussion-product',variantId:'discussion-variant'}).expect(201)));
-    expect(responses[0].body.id).toBe(responses[1].body.id);expect(responses[0].body.context.variant).toBe('Noir · P1');
-    expect(await app.get(DataSource).getRepository(Conversation).countBy({userId:clientId,productId:'discussion-product'})).toBe(1);
-    const detail=await request(app.getHttpServer()).get('/api/v1/conversations/'+responses[0].body.id).set('Cookie',cookie).expect(200);expect(detail.body.context.slug).toBe('discussion-product');
+  it('ouvre ou retrouve la discussion produit sans doublon en cas de clic répété', async () => {
+    await app
+      .get(DataSource)
+      .getRepository(Product)
+      .save({
+        id: 'discussion-product',
+        slug: 'discussion-product',
+        name: 'Pièce à discuter',
+        category: 'Robes',
+        description: 'Article de test pour discussion',
+        material: 'Coton',
+        care: 'Lavage doux',
+        price: 1000,
+        image: '/test.svg',
+        published: true,
+        madeToOrder: false,
+        variants: [
+          {
+            id: 'discussion-variant',
+            color: 'Noir',
+            hex: '#000000',
+            size: 'P1',
+            stock: 1,
+            price: 1000,
+            image: '/test.svg',
+          },
+        ],
+      });
+    const responses = await Promise.all(
+      [1, 2].map(() =>
+        request(app.getHttpServer())
+          .post('/api/v1/conversations')
+          .set('Cookie', cookie)
+          .send({
+            productId: 'discussion-product',
+            variantId: 'discussion-variant',
+          })
+          .expect(201),
+      ),
+    );
+    expect(responses[0].body.id).toBe(responses[1].body.id);
+    expect(responses[0].body.context.variant).toBe('Noir · P1');
+    expect(
+      await app
+        .get(DataSource)
+        .getRepository(Conversation)
+        .countBy({ userId: clientId, productId: 'discussion-product' }),
+    ).toBe(1);
+    const detail = await request(app.getHttpServer())
+      .get('/api/v1/conversations/' + responses[0].body.id)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(detail.body.context.slug).toBe('discussion-product');
   });
-  it('refuse une variante inexistante lors de l’ouverture de discussion',async()=>{await request(app.getHttpServer()).post('/api/v1/conversations').set('Cookie',cookie).send({productId:'discussion-product',variantId:'missing'}).expect(400);});
+  it('refuse une variante inexistante lors de l’ouverture de discussion', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/conversations')
+      .set('Cookie', cookie)
+      .send({ productId: 'discussion-product', variantId: 'missing' })
+      .expect(400);
+  });
+  it('identifie chaque personne et enrichit aussi les anciennes discussions avec la photo et le prix', async () => {
+    const db = app.get(DataSource);
+    for (const [id, name, role] of [
+      ['second-client', 'Aïcha Test', 'client'],
+      ['test-admin', 'Atelier Test', 'admin'],
+    ]) {
+      await db
+        .getRepository(User)
+        .save({ id, name, role, email: id + '@example.test' });
+      await db
+        .getRepository(Session)
+        .save({
+          id: hashToken(id + '-session'),
+          userId: id,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+        });
+    }
+    const second = await request(app.getHttpServer())
+      .post('/api/v1/conversations')
+      .set('Cookie', 'pletosie_session=second-client-session')
+      .send({ productId: 'discussion-product' })
+      .expect(201);
+    expect(second.body.displayName).toBe('Atelier Pletosie');
+    expect(second.body.context).toMatchObject({
+      image: '/test.svg',
+      price: 1000,
+      category: 'Robes',
+    });
+    await db
+      .getRepository(Conversation)
+      .update(second.body.id, {
+        context: {
+          name: 'Pièce à discuter',
+          slug: 'discussion-product',
+          variant: '',
+        },
+      });
+    const all = await request(app.getHttpServer())
+      .get('/api/v1/conversations')
+      .set('Cookie', 'pletosie_session=test-admin-session')
+      .expect(200);
+    const related = all.body.filter(
+      (c: { productId: string }) => c.productId === 'discussion-product',
+    );
+    expect(related).toHaveLength(2);
+    expect(related.map((c: { displayName: string }) => c.displayName)).toEqual(
+      expect.arrayContaining(['Client Google', 'Aïcha Test']),
+    );
+    expect(
+      related.find((c: { userId: string }) => c.userId === 'second-client')
+        .context,
+    ).toMatchObject({ image: '/test.svg', price: 1000 });
+    expect(
+      related.every(
+        (c: { person: object }) =>
+          Object.keys(c.person).sort().join(',') === 'id,name',
+      ),
+    ).toBe(true);
+    const own = await request(app.getHttpServer())
+      .get('/api/v1/conversations')
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(
+      own.body.some((c: { userId: string }) => c.userId === 'second-client'),
+    ).toBe(false);
+    await request(app.getHttpServer())
+      .get('/api/v1/conversations/' + second.body.id)
+      .set('Cookie', cookie)
+      .expect(403);
+  });
   it('révoque la session à la déconnexion', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/logout')
