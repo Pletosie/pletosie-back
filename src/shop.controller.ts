@@ -1,3 +1,4 @@
+import { HomepageDto } from './homepage.dto';
 import {
   GoneException,
   Body,
@@ -74,6 +75,33 @@ export class ShopController {
   }
   @Get('products') products() {
     return this.shop.products();
+  }
+  @Get('homepage') async homepage() {
+    return (
+      (await this.shop.db.getRepository(Setting).findOneBy({ id: 'homepage' }))?.value || null
+    );
+  }
+  @Put('admin/homepage') @UseGuards(AuthGuard, AdminGuard)
+  async saveHomepage(@Body() dto: HomepageDto, @Req() req: AuthRequest) {
+    return this.shop.transaction(async (em) => {
+      const ids = [...new Set([
+        dto.heroProductId, ...dto.hero, ...dto.looks,
+        ...dto.selection, ...dto.campaigns,
+      ].filter(Boolean))];
+      if (
+        ids.length &&
+        await em.countBy(Product, { id: In(ids), published: true }) !== ids.length
+      )
+        throw new BadRequestException(
+          'Choisissez uniquement des articles publiés et existants.',
+        );
+      await em.save(Setting, { id: 'homepage', value: dto });
+      await this.shop.audit(
+        em, req.user.id, 'homepage.update', 'homepage',
+        'Composition de la page d’accueil mise à jour',
+      );
+      return dto;
+    });
   }
   @Get('settings') async settings() {
     return {
